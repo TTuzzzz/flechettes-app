@@ -87,9 +87,11 @@ from dotenv import load_dotenv
 # Charger les variables d'environnement depuis .env (optionnel)
 load_dotenv()
 
-url = 'https://tphqhevpmlsksmzidara.supabase.co'
-key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHFoZXZwbWxza3NtemlkYXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwNDksImV4cCI6MjA3NTE0MzA0OX0.zIMfyAHH7pUui0fReFOwTzhUpwHn5Fu49g-czNoxF38'
-supabase = create_client(url,key)
+#url = 'https://tphqhevpmlsksmzidara.supabase.co'
+#key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHFoZXZwbWxza3NtemlkYXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwNDksImV4cCI6MjA3NTE0MzA0OX0.zIMfyAHH7pUui0fReFOwTzhUpwHn5Fu49g-czNoxF38'
+SUPABASE_URL = st.secrets["supabase"]["url"]
+SUPABASE_KEY = st.secrets["supabase"]["key"]
+supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 
 def get_players():
     """Retourne un dict {nom: rating} depuis la table players."""
