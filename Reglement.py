@@ -8,7 +8,7 @@ import json
 import matplotlib.pyplot as plt
 from supabase import create_client
 import os
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 from collections import Counter
 
 # =========================
@@ -82,10 +82,7 @@ from supabase import create_client
 from datetime import datetime
 import json
 import os
-from dotenv import load_dotenv
-
-# Charger les variables d'environnement depuis .env (optionnel)
-load_dotenv()
+#from dotenv import load_dotenv
 
 #url = 'https://tphqhevpmlsksmzidara.supabase.co'
 #key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHFoZXZwbWxza3NtemlkYXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwNDksImV4cCI6MjA3NTE0MzA0OX0.zIMfyAHH7pUui0fReFOwTzhUpwHn5Fu49g-czNoxF38'
