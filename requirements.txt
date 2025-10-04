@@ -1,11 +1,7 @@
+streamlit==1.27.2
+pandas==2.1.0
 matplotlib
 numpy
-pandas
 plotly
 python-dotenv
-streamlit
-supabase
-json
-datetime
-dotenv
-collections
+supabase-py  # Vérifiez si votre package supabase s'appelle 'supabase-py'
