@@ -86,8 +86,8 @@ import os
 
 #url = 'https://tphqhevpmlsksmzidara.supabase.co'
 #key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHFoZXZwbWxza3NtemlkYXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwNDksImV4cCI6MjA3NTE0MzA0OX0.zIMfyAHH7pUui0fReFOwTzhUpwHn5Fu49g-czNoxF38'
-SUPABASE_URL = st.secrets["supabase"]["url"]
-SUPABASE_KEY = st.secrets["supabase"]["key"]
+SUPABASE_URL = st.secrets["url"]
+SUPABASE_KEY = st.secrets["key"]
 supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 
 def get_players():
