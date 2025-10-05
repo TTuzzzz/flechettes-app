@@ -4,6 +4,7 @@ matplotlib
 numpy
 plotly
 supabase
+pytz
 
 
 
