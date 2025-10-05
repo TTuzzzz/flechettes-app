@@ -4,7 +4,7 @@ import streamlit as st
 # APP STREAMLIT
 # =========================
 st.set_page_config(
-    page_title="Documentation",
+    page_title="Fléchettes Reference",
     page_icon="🎯",
 )
 st.title("🎯 Fléchettes Reference")
@@ -114,4 +114,5 @@ C’est le principe fondamental du classement Elo ✅
 #coeur.init_db()
 
 # Charger joueurs
+
 players = coeur.get_players()
