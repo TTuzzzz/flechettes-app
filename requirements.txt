@@ -1,8 +1,9 @@
-streamlit==1.27.2
+streamlit==1.29.0
 pandas
 matplotlib
 numpy
 plotly
 supabase
+
 
 
