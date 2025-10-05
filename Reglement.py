@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from supabase import create_client
 import os
 #from dotenv import load_dotenv
-from collections import Counter
+from collections import Counter, defaultdict
 
 # =========================
 # FONCTIONS ELO
@@ -84,15 +84,15 @@ import json
 import os
 #from dotenv import load_dotenv
 
-#url = 'https://tphqhevpmlsksmzidara.supabase.co'
-#key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHFoZXZwbWxza3NtemlkYXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwNDksImV4cCI6MjA3NTE0MzA0OX0.zIMfyAHH7pUui0fReFOwTzhUpwHn5Fu49g-czNoxF38'
+#SUPABASE_URL = 'https://tphqhevpmlsksmzidara.supabase.co'
+#SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHFoZXZwbWxza3NtemlkYXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwNDksImV4cCI6MjA3NTE0MzA0OX0.zIMfyAHH7pUui0fReFOwTzhUpwHn5Fu49g-czNoxF38'
 SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
 supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 
 def get_players():
     """Retourne un dict {nom: rating} depuis la table players."""
-    response = supabase.table("players").select("*").execute()
+    response = supabase.table("players").select("*").order("id_player", desc=False).execute()
     data = response.data or []
     return {p["name"]: p["rating"] for p in data}
 
@@ -176,8 +176,43 @@ def nb_games_played_by_player():
             
     return Counter(player_plays)
 
+def nb_games_played_by_day():
+    """
+    """
+    response = supabase.table("matches").select("date, ratings").order("date", desc=False).execute()
+    data = response.data or []
+    day_plays = []
+    
+    for date in data:
+        day_plays.append(date["date"][:10])
+    return Counter(day_plays)
+
+def players_by_day():
+    """
+    Retourne un dictionnaire {date: [liste de joueurs distincts ayant joué ce jour-là]}.
+    """
+    response = supabase.table("matches").select("date, ratings").order("date", desc=False).execute()
+    data = response.data or []
+    
+    # Dictionnaire : date -> set(joueurs)
+    players_per_day = defaultdict(set)
+    
+    for match in data:
+        date_str = match["date"][:10]  # format YYYY-MM-DD
+        ratings_json = match.get("ratings", "{}")
+
+        try:
+            ratings = json.loads(ratings_json)
+            for player in ratings.keys():
+                players_per_day[date_str].add(player)
+        except Exception:
+            pass  # si un champ ratings est vide ou corrompu, on ignore
+
+    # Conversion des sets en listes pour un affichage plus simple
+    players_per_day = {d: sorted(list(players)) for d, players in players_per_day.items()}
+
+    return players_per_day
 
 
 
 players = get_players()
-
