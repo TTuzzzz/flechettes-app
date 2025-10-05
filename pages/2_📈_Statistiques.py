@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import numpy as np
 from datetime import datetime
+import datetime as dt
 
 st.set_page_config(
     page_title="Statistique",
@@ -22,81 +23,44 @@ if not players:
     coeur.save_players(players)
 
 
-# Récupérer le dernier match
+# =========================
+# Calcul du dernier delta Elo (approche chronologique)
+# =========================
 matches = coeur.get_matches()
-last_deltas = {}
-
-def parse_date_safe(s):
-    if s is None:
-        return datetime.min
-    if isinstance(s, datetime):
-        return s
-    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
-        try:
-            return datetime.fromisoformat(s) if "T" in s else datetime.strptime(s, fmt)
-        except Exception:
-            pass
-    try:
-        return datetime.fromisoformat(str(s))
-    except Exception:
-        return datetime.min
-
-def parse_ratings_field(field):
-    if field is None:
-        return {}
-    if isinstance(field, dict):
-        return {str(k): float(v) for k, v in field.items()}
-    if isinstance(field, str):
-        try:
-            parsed = json.loads(field)
-            if isinstance(parsed, dict):
-                return {str(k): float(v) for k, v in parsed.items()}
-        except Exception:
-            try:
-                parsed = eval(field)
-                if isinstance(parsed, dict):
-                    return {str(k): float(v) for k, v in parsed.items()}
-            except Exception:
-                pass
-    return {}
-
-matches = coeur.get_matches()
+players = coeur.get_players()
 last_deltas = {}
 
 if matches:
-    # tri des matches par date décroissante
-    matches_sorted = sorted(
-        matches,
-        key=lambda m: parse_date_safe(m[0]),
-        reverse=True
-    )
+    # Récupérer tous les ratings historiques sous forme chronologique
+    evolution = {}  # dict {joueur: [ratings successifs]}
 
-    last_match = matches_sorted[0]
-    last_ratings = parse_ratings_field(last_match[2])
+    # Trier les matchs par id (ordre chronologique)
+    matches_sorted = sorted(matches, key=lambda m: m[0])
 
-    if len(matches_sorted) > 1:
-        prev_match = matches_sorted[1]
-        prev_ratings = parse_ratings_field(prev_match[2])
-    else:
-        prev_ratings = {}
+    for match in matches_sorted:
+        ratings_json = match[2]
+        ratings = json.loads(ratings_json)
 
-    for player, rating_after in last_ratings.items():
-        rating_before = prev_ratings.get(player)
-        if rating_before is None:
-            # remonter la pile pour trouver le dernier rating connu
-            for m in matches_sorted[1:]:
-                r = parse_ratings_field(m[2])
-                if player in r:
-                    rating_before = r[player]
-                    break
-        if rating_before is None:
-            rating_before = coeur.players.get(player, 1200)
+        for player, rating in ratings.items():
+            if player not in evolution:
+                evolution[player] = [1200]  # Elo initial
+            evolution[player].append(float(rating))
 
-        last_deltas[player] = int(round(float(rating_after) - float(rating_before)))
+    # Identifier les joueurs du dernier match
+    last_match = matches_sorted[-1]
+    last_ratings = json.loads(last_match[2])
+    participants = list(last_ratings.keys())
 
+    # Calcul du delta pour les participants uniquement
+    for player in participants:
+        if player in evolution and len(evolution[player]) >= 2:
+            last_deltas[player] = int(round(evolution[player][-1] - evolution[player][-2]))
+        else:
+            last_deltas[player] = 0  # cas d’un joueur qui joue pour la première fois
 
-
-# Fonction pour transformer le delta en flèche/pictogramme
+# =========================
+# Construction du tableau classement
+# =========================
 def delta_icon(delta):
     if delta > 0:
         return f"💹 {delta}"
@@ -105,107 +69,188 @@ def delta_icon(delta):
     else:
         return "⚪ 0"
 
-# Créer le DataFrame
+# Créer le DataFrame principal
 df = pd.DataFrame([
     {
         "Joueur": name,
         "Elo": rating,
         "Dernière variation": delta_icon(last_deltas.get(name, 0))
     }
-    for name, rating in coeur.players.items()
+    for name, rating in players.items()
 ]).sort_values(by="Elo", ascending=False)
 
 df['Rang'] = df['Elo'].rank(method='min', ascending=False)
-
-
 df['Elo'] = pd.to_numeric(df['Elo'], downcast='integer', errors='coerce')
 df['Elo'] = df['Elo'].apply(lambda x: f"{x:,.0f}".replace(",", " "))
 df['Rang'] = pd.to_numeric(df['Rang'], downcast='integer', errors='coerce')
 
-st.header("Evaluation actuelle 🎯")
-st.dataframe(df.set_index("Rang"))
+with st.container(border=True):
+    # ===============================
+    # Sélection d’une date à afficher
+    # ===============================
+    st.header("Résumé quotidien ⌚")
+    matches = coeur.get_matches()
+    if not matches:
+        st.info("Aucune partie enregistrée pour le moment.")
+    else:
+        # Liste de toutes les dates présentes dans la table matches
+        dates_disponibles = sorted({m[0][:10] for m in matches})
+        default_index = len(dates_disponibles) - 1  # dernière date par défaut
+        selected_date = st.date_input(
+            "📅 Choisis une date",
+            value=dt.date.fromisoformat(dates_disponibles[default_index]),
+            min_value=dt.date.fromisoformat(dates_disponibles[0]),
+            max_value=dt.date.fromisoformat(dates_disponibles[-1])
+        )
+        selected_str = str(selected_date)
 
-########################
-##Section Graphique#####
-########################
+        # ==========================
+        # Infos générales du jour
+        # ==========================
+        ppd = coeur.nb_games_played_by_day()
+        nb_parties = ppd.get(selected_str, 0)
 
+        # Joueurs ayant joué ce jour-là
+        players_per_day = coeur.players_by_day()
+        players_day = players_per_day.get(selected_str, [])
 
-st.subheader("📈 Évolution Elo des joueurs")
-    
-history = coeur.get_history()
-players = coeur.get_players()
-
-if players:
-    all_players = list(players.keys())
-    # Elo initial en partie 0
-    ratings_by_player = {p: [1200] for p in all_players}
-
-    # Charger historique
-    for i, (date, ratings_json) in enumerate(history, start=1):
-        ratings = json.loads(ratings_json)
-        for p in all_players:
-            if p in ratings:
-                ratings_by_player[p].append(ratings[p])
+        if players_day:
+            if len(players_day) == 2:
+                joueurs_str = f"**{players_day[0]}** et **{players_day[1]}** ont joué ce jour-là."
+            elif len(players_day) > 2:
+                joueurs_str = ", ".join(players_day[:-1]) + f" et {players_day[-1]}"
+                joueurs_str = f"**{joueurs_str}** ont joué ce jour-là."
             else:
-                # Répéter le dernier score si joueur absent
-                ratings_by_player[p].append(ratings_by_player[p][-1])
+                joueurs_str = f"**{players_day[0]}** a joué ce jour-là."
+        else:
+            joueurs_str = "😴 Aucun joueur n’a disputé de partie ce jour-là."
 
-    # Axe des X : parties
-    timeline = list(range(len(history) + 1))
+        # ==========================
+        # Affichage des infos
+        # ==========================
+        st.markdown(f"📊 **{nb_parties}** partie(s) disputée(s) le **{selected_str}**.")
+        st.markdown(joueurs_str)
 
-    # Création du graphique Plotly
-    fig = go.Figure()
+        # ==========================
+        # Tableau des matchs du jour
+        # ==========================
+        day_matches = [m for m in matches if m[0].startswith(selected_str)]
 
-    for p, values in ratings_by_player.items():
-        fig.add_trace(go.Scatter(
-            x=timeline,
-            y=values,
-            mode='lines+markers',
-            name=p,
-            text=[f"{p}: {int(v):,}".replace(","," ") for v in values],  # info-bulle : séparateur de millier et pas de décimale
-            hoverinfo="text",
-            line=dict(width=2)
-        ))
+        if day_matches:
+            data = []
+            for date, standings_raw, ratings_json in day_matches:
+                try:
+                    standings = standings_raw.split(",") if isinstance(standings_raw, str) else standings_raw
+                    standings_clean = []
+                    for i, team in enumerate(standings, start=1):
+                        # Nettoyage pour afficher j1 et j2 au lieu du nom d'équipe
+                        team_players = team.replace("[", "").replace("]", "").replace("'", "").split("&")
+                        team_players = [p.strip() for p in team_players if p.strip()]
+                        if len(team_players) == 1:
+                            team_str = team_players[0]
+                        else:
+                            team_str = " et ".join(team_players)
+                        standings_clean.append(f"{i}ᵉ : {team_str}")
+                    data.append({
+                        "Heure": date[11:19],
+                        "Classement": "\n".join(standings_clean)
+                    })
+                except Exception:
+                    continue
 
-    # Mise en page
-    fig.update_layout(
-        title="Évolution Elo des joueurs",
-        xaxis=dict(title="Nombre de parties", dtick=1),
-        yaxis=dict(title="Elo"),
-        legend=dict(
-            orientation="h",  # horizontale
-            yanchor="bottom",
-            y=-0.3,           # en dessous du graphique
-            xanchor="center",
-            x=0.5
-        ),
-        margin=dict(t=50, b=80),  # marge pour légende
-        hovermode="x unified",
-        template="plotly_white"
-    )
+            df_matches = pd.DataFrame(data)
+            st.subheader("🗒️ Matchs disputés ce jour-là")
+            st.dataframe(df_matches, use_container_width=True)
+        else:
+            st.info("Aucun match enregistré pour cette date.")
+
+with st.container(border=True):
+    st.header("Evaluation actuelle 🎯")
+    st.dataframe(df.set_index("Rang"))
 
 
-    st.plotly_chart(fig, use_container_width=True)
+    ########################
+    ##Section Graphique#####
+    ########################
 
-else:
-    st.info("Aucun joueur enregistré.")
+
+    st.subheader("📈 Évolution Elo des joueurs")
+        
+    history = coeur.get_history()
+    players = coeur.get_players()
+
+    if players:
+        all_players = list(players.keys())
+        # Elo initial en partie 0
+        ratings_by_player = {p: [1200] for p in all_players}
+
+        # Charger historique
+        for i, (date, ratings_json) in enumerate(history, start=1):
+            ratings = json.loads(ratings_json)
+            for p in all_players:
+                if p in ratings:
+                    ratings_by_player[p].append(ratings[p])
+                else:
+                    # Répéter le dernier score si joueur absent
+                    ratings_by_player[p].append(ratings_by_player[p][-1])
+
+        # Axe des X : parties
+        timeline = list(range(len(history) + 1))
+
+        # Création du graphique Plotly
+        fig = go.Figure()
+
+        for p, values in ratings_by_player.items():
+            fig.add_trace(go.Scatter(
+                x=timeline,
+                y=values,
+                mode='lines+markers',
+                name=p,
+                text=[f"{p}: {int(v):,}".replace(","," ") for v in values],  # info-bulle : séparateur de millier et pas de décimale
+                hoverinfo="text",
+                line=dict(width=2)
+            ))
+
+        # Mise en page
+        fig.update_layout(
+            title="Évolution Elo des joueurs",
+            xaxis=dict(title="Nombre de parties", dtick=1),
+            yaxis=dict(title="Elo"),
+            legend=dict(
+                orientation="h",  # horizontale
+                yanchor="bottom",
+                y=-0.3,           # en dessous du graphique
+                xanchor="center",
+                x=0.5
+            ),
+            margin=dict(t=50, b=80),  # marge pour légende
+            hovermode="x unified",
+            template="plotly_white"
+        )
+
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("Aucun joueur enregistré.")
     
 
 #################
 ###STATS INDIV###
 #################
-st.subheader("Statistiques individuelles")
+with st.container(border=True):
+    st.subheader("Statistiques individuelles")
 
-max_rating = coeur.get_max_elo_players()
-nb_matchs = coeur.nb_games_played_by_player()
-players_list = list(coeur.players.keys())
-selected_player = st.selectbox("Filtre sur un joueur :"
-                                , players_list
-                                ,index=None
-                                ,placeholder="Choisir le joueur",)
-if selected_player:
-    st.write("Indicateurs clés de " + selected_player)
-    a, b = st.columns(2)
-    a.metric("ELO Maximum :", max_rating[selected_player])
-    b.metric("Nombre de parties jouées :", nb_matchs[selected_player])
+    max_rating = coeur.get_max_elo_players()
+    nb_matchs = coeur.nb_games_played_by_player()
+    players_list = list(coeur.players.keys())
+    selected_player = st.selectbox("Filtre sur un joueur :"
+                                    , players_list
+                                    ,index=None
+                                    ,placeholder="Choisir le joueur",)
+    if selected_player:
+        st.write("Indicateurs clés de " + selected_player)
+        a, b = st.columns(2)
+        a.metric("ELO Maximum :", max_rating[selected_player])
+        b.metric("Nombre de parties jouées :", nb_matchs[selected_player])
      
