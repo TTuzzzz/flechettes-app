@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import matplotlib.pyplot as plt
 from supabase import create_client
+import pytz
 import os
 #from dotenv import load_dotenv
 from collections import Counter, defaultdict
@@ -139,10 +140,15 @@ def add_match(standings, players_after, participants):
     players_after : dict {joueur: Elo après la partie}
     participants : liste des joueurs ayant réellement joué
     """
+    TIMEZONE = 'Europe/Paris'
+    utc_now = datetime.now(pytz.utc)
+    paris_tz = pytz.timezone(TIMEZONE)
+    paris_now = utc_now.astimezone(paris_tz)
+    localized_date_iso = paris_now.isoformat(timespec="seconds")
     snapshot = {p: players_after[p] for p in participants}
 
     supabase.table("matches").insert({
-        "date": datetime.now().isoformat(timespec="seconds"),
+        "date": localized_date_iso,
         "standings": ",".join(standings),
         "ratings": json.dumps(snapshot)
     }).execute()
