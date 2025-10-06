@@ -11,6 +11,7 @@ import datetime as dt
 st.set_page_config(
     page_title="Statistique",
     page_icon="📈",
+    layout="wide"
 )
 
 # Init DB
@@ -160,7 +161,7 @@ with st.container(border=True):
 
             df_matches = pd.DataFrame(data)
             st.subheader("🗒️ Matchs disputés ce jour-là")
-            st.dataframe(df_matches, use_container_width=True)
+            st.dataframe(df_matches, use_container_width=True,hide_index=1)
         else:
             st.info("Aucun match enregistré pour cette date.")
 
@@ -243,7 +244,7 @@ with st.container(border=True):
 
     max_rating = coeur.get_max_elo_players()
     nb_matchs = coeur.nb_games_played_by_player()
-    players_list = list(coeur.players.keys())
+    players_list = list(coeur.get_players().keys())
     selected_player = st.selectbox("Filtre sur un joueur :"
                                     , players_list
                                     ,index=None
