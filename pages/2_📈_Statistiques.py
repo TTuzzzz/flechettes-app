@@ -218,17 +218,19 @@ with st.container(border=True):
             xaxis=dict(title="Nombre de parties", dtick=1),
             yaxis=dict(title="Elo"),
             legend=dict(
-                orientation="h",  # horizontale
-                yanchor="bottom",
-                y=-0.3,           # en dessous du graphique
+                orientation="h",     # légende horizontale
+                yanchor="top",       # ancrée en haut (par rapport à son bloc)
+                y=-0.4,              # suffisamment éloignée pour ne pas chevaucher
                 xanchor="center",
-                x=0.5
+                x=0.5,
+                font=dict(size=10),  # police plus petite pour téléphone
+                bgcolor="rgba(255,255,255,0.8)",  # fond blanc translucide (lisible sur mobile)
             ),
-            margin=dict(t=50, b=80),  # marge pour légende
+            margin=dict(t=40, b=120),  # marge basse augmentée pour la légende
             hovermode="x unified",
-            template="plotly_white"
+            template="plotly_white",
+            height=450  # hauteur contrôlée pour une meilleure lisibilité mobile
         )
-
 
         st.plotly_chart(fig, use_container_width=True)
 

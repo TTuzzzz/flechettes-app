@@ -14,7 +14,7 @@ with st.container(border=True):
     st.subheader("Ajouter une partie 🎯")
 
     players_list = list(coeur.get_players().keys())
-    selected_players = st.multiselect("Sélectionne les joueurs qui participent :", players_list)
+    selected_players = st.multiselect("Sélectionne les joueurs qui participent :", sorted(players_list),placeholder="Joueurs")
 
     if len(selected_players) >= 2:
         st.markdown("### ⚙️ Configuration des équipes")
