@@ -4,7 +4,6 @@ import streamlit as st
 st.set_page_config(
     page_title="Ajouter une partie",
     page_icon="⚙️",
-    layout="wide"
 )
 
 # =========================
@@ -14,7 +13,7 @@ with st.container(border=True):
     st.subheader("Ajouter une partie 🎯")
 
     players_list = list(coeur.get_players().keys())
-    selected_players = st.multiselect("Sélectionne les joueurs qui participent :", sorted(players_list),placeholder="Joueurs")
+    selected_players = st.multiselect("Sélectionne les joueurs qui participent :", players_list)
 
     if len(selected_players) >= 2:
         st.markdown("### ⚙️ Configuration des équipes")
@@ -44,8 +43,8 @@ with st.container(border=True):
             standings = st.multiselect("Classement final des équipes (ordre de victoire)", list(teams.keys()))
             if len(standings) == len(teams):
                 if st.button("Enregistrer la partie"):
-                    new_ratings, deltas = coeur.update_ratings_teams(coeur.players, teams, standings, K=24)
-                    updated_players = coeur.players.copy()
+                    new_ratings, deltas = coeur.update_ratings_teams(coeur.get_players(), teams, standings, K=24)
+                    updated_players = coeur.get_players().copy()
                     updated_players.update(new_ratings)
                     coeur.save_players(updated_players)
 

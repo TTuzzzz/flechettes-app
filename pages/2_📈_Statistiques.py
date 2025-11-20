@@ -11,7 +11,6 @@ import datetime as dt
 st.set_page_config(
     page_title="Statistique",
     page_icon="📈",
-    layout="wide"
 )
 
 # Init DB
@@ -31,23 +30,12 @@ matches = coeur.get_matches()
 players = coeur.get_players()
 last_deltas = {}
 
+
 if matches:
     # Récupérer tous les ratings historiques sous forme chronologique
-    evolution = {}  # dict {joueur: [ratings successifs]}
-
-    # Trier les matchs par id (ordre chronologique)
-    matches_sorted = sorted(matches, key=lambda m: m[0])
-
-    for match in matches_sorted:
-        ratings_json = match[2]
-        ratings = json.loads(ratings_json)
-
-        for player, rating in ratings.items():
-            if player not in evolution:
-                evolution[player] = [1200]  # Elo initial
-            evolution[player].append(float(rating))
-
+    evolution = coeur.get_players_ratings_history()
     # Identifier les joueurs du dernier match
+    matches_sorted = sorted(matches, key=lambda m: m[0])
     last_match = matches_sorted[-1]
     last_ratings = json.loads(last_match[2])
     participants = list(last_ratings.keys())
@@ -55,7 +43,7 @@ if matches:
     # Calcul du delta pour les participants uniquement
     for player in participants:
         if player in evolution and len(evolution[player]) >= 2:
-            last_deltas[player] = int(round(evolution[player][-1] - evolution[player][-2]))
+            last_deltas[player] = int(round(evolution[player][0] - evolution[player][1]))
         else:
             last_deltas[player] = 0  # cas d’un joueur qui joue pour la première fois
 
@@ -161,82 +149,80 @@ with st.container(border=True):
 
             df_matches = pd.DataFrame(data)
             st.subheader("🗒️ Matchs disputés ce jour-là")
-            st.dataframe(df_matches, use_container_width=True,hide_index=1)
+            st.dataframe(df_matches, use_container_width=True)
         else:
             st.info("Aucun match enregistré pour cette date.")
 
 with st.container(border=True):
     st.header("Evaluation actuelle 🎯")
-    st.dataframe(df.set_index("Rang"))
+    st.dataframe(df.set_index("Rang"),use_container_width=True, height="auto")
 
 
     ########################
     ##Section Graphique#####
     ########################
 
-
-    st.subheader("📈 Évolution Elo des joueurs")
+    
+    #st.subheader("📈 Évolution Elo des joueurs")
         
-    history = coeur.get_history()
-    players = coeur.get_players()
+    #history = coeur.get_history()
+    #players = coeur.get_players()
 
-    if players:
-        all_players = list(players.keys())
+    #if players:
+        #all_players = list(players.keys())
         # Elo initial en partie 0
-        ratings_by_player = {p: [1200] for p in all_players}
+        #ratings_by_player = {p: [1200] for p in all_players}
 
         # Charger historique
-        for i, (date, ratings_json) in enumerate(history, start=1):
-            ratings = json.loads(ratings_json)
-            for p in all_players:
-                if p in ratings:
-                    ratings_by_player[p].append(ratings[p])
-                else:
+        #for i, (date, ratings_json) in enumerate(history, start=1):
+            #ratings = json.loads(ratings_json)
+            #for p in all_players:
+                #if p in ratings:
+                    #ratings_by_player[p].append(ratings[p])
+                #else:
                     # Répéter le dernier score si joueur absent
-                    ratings_by_player[p].append(ratings_by_player[p][-1])
+                    #ratings_by_player[p].append(ratings_by_player[p][-1])
 
         # Axe des X : parties
-        timeline = list(range(len(history) + 1))
+        #timeline = list(range(len(history) + 1))
 
         # Création du graphique Plotly
-        fig = go.Figure()
+        #fig = go.Figure()
 
-        for p, values in ratings_by_player.items():
-            fig.add_trace(go.Scatter(
-                x=timeline,
-                y=values,
-                mode='lines+markers',
-                name=p,
-                text=[f"{p}: {int(v):,}".replace(","," ") for v in values],  # info-bulle : séparateur de millier et pas de décimale
-                hoverinfo="text",
-                line=dict(width=2)
-            ))
+        #for p, values in ratings_by_player.items():
+            #fig.add_trace(go.Scatter(
+                #x=timeline,
+                #y=values,
+                #mode='lines+markers',
+                #name=p,
+                #text=[f"{p}: {int(v):,}".replace(","," ") for v in values],  # info-bulle : séparateur de millier et pas de décimale
+                #hoverinfo="text",
+                #line=dict(width=2)
+            #))
 
         # Mise en page
-        fig.update_layout(
-            title="Évolution Elo des joueurs",
-            xaxis=dict(title="Nombre de parties", dtick=1),
-            yaxis=dict(title="Elo"),
-            legend=dict(
-                orientation="h",     # légende horizontale
-                yanchor="top",       # ancrée en haut (par rapport à son bloc)
-                y=-0.4,              # suffisamment éloignée pour ne pas chevaucher
-                xanchor="center",
-                x=0.5,
-                font=dict(size=10),  # police plus petite pour téléphone
-                bgcolor="rgba(255,255,255,0.8)",  # fond blanc translucide (lisible sur mobile)
-            ),
-            margin=dict(t=40, b=120),  # marge basse augmentée pour la légende
-            hovermode="x unified",
-            template="plotly_white",
-            height=450  # hauteur contrôlée pour une meilleure lisibilité mobile
-        )
+        #fig.update_layout(
+            #title="Évolution Elo des joueurs",
+            #xaxis=dict(title="Nombre de parties", dtick=1),
+            #yaxis=dict(title="Elo"),
+            #legend=dict(
+                #orientation="h",  # horizontale
+                #yanchor="bottom",
+                #y=-0.3,           # en dessous du graphique
+                #xanchor="center",
+                #x=0.5
+            #),
+            #margin=dict(t=50, b=80),  # marge pour légende
+            #hovermode="x unified",
+            #template="plotly_white"
+        #)
 
-        st.plotly_chart(fig, use_container_width=True)
 
-    else:
-        st.info("Aucun joueur enregistré.")
-    
+        #st.plotly_chart(fig, use_container_width=True)
+
+    #else:
+    #    st.info("Aucun joueur enregistré.")
+
 
 #################
 ###STATS INDIV###
