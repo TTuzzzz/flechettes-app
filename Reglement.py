@@ -92,10 +92,22 @@ SUPABASE_KEY = st.secrets["supabase"]["key"]
 supabase = create_client(SUPABASE_URL,SUPABASE_KEY)
 
 def get_players():
-    """Retourne un dict {nom: rating} depuis la table players."""
-    response = supabase.table("players").select("*").order("id_player", desc=False).execute()
+    """
+    Retourne un dict {nom: rating} où chaque joueur reçoit
+    son rating associé au plus grand id_player (donc le plus récent).
+    """
+    response = supabase.table("players").select("*").order("id_player", desc=True).execute()
     data = response.data or []
-    return {p["name"]: p["rating"] for p in data}
+
+    latest = {}
+
+    for row in data:
+        name = row["name"]
+        # Comme on trie par id_player DESC, la première occurrence est la plus récente
+        if name not in latest:
+            latest[name] = row["rating"]
+
+    return latest
 
 def get_max_elo_players():
     """Retourne un dict {nom: rating} depuis la table players."""
@@ -127,6 +139,34 @@ def add_player(name, rating):
 def delete_player(name):
     """Supprime un joueur par son nom."""
     supabase.table("players").delete().eq("name", name).execute()
+    
+def get_players_ratings_history():
+    """
+    Retourne un dict :
+    {
+        name: [rating1, rating2, rating3, ...]  # triés par id_player
+    }
+    """
+    # Récupération des données ordonnées par id_player croissant
+    response = supabase.table("players").select("id_player, name, rating").order("id_player", desc=True).execute()
+    data = response.data or []
+
+    players_history = {}
+
+    for row in data:
+        name = row["name"]
+        rating = row["rating"]
+
+        # Si c'est la première fois qu'on voit ce joueur → créer la liste
+        if name not in players_history:
+            players_history[name] = []
+        
+        players_history[name].append(rating)
+    return players_history
+
+#layers_history.get("Fred")
+
+
 
 # =========================
 # GESTION DES MATCHS
@@ -220,5 +260,3 @@ def players_by_day():
     return players_per_day
 
 
-
-players = get_players()
