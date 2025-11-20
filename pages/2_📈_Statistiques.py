@@ -155,7 +155,7 @@ with st.container(border=True):
 
 with st.container(border=True):
     st.header("Evaluation actuelle 🎯")
-    st.dataframe(df.set_index("Rang"),use_container_width=True, height="auto")
+    st.dataframe(df.set_index("Rang"))
 
 
     ########################
