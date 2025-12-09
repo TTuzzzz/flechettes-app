@@ -68,6 +68,7 @@ df = pd.DataFrame([
     for name, rating in players.items()
 ]).sort_values(by="Elo", ascending=False)
 
+df['Joueur'] = df['Joueur'].replace("Pauline B", "Pauline B 💪")
 df['Rang'] = df['Elo'].rank(method='min', ascending=False)
 df['Elo'] = pd.to_numeric(df['Elo'], downcast='integer', errors='coerce')
 df['Elo'] = df['Elo'].apply(lambda x: f"{x:,.0f}".replace(",", " "))
@@ -242,4 +243,5 @@ with st.container(border=True):
         a, b = st.columns(2)
         a.metric("ELO Maximum :", max_rating[selected_player])
         b.metric("Nombre de parties jouées :", nb_matchs[selected_player])
+
      
